@@ -20,7 +20,10 @@ func server() {
 
 	handleTest := func(w http.ResponseWriter, r *http.Request) {
 		templ := template.Must(template.ParseFiles("templates/index.html"))
-		templ.Execute(w, nil)
+		err := templ.Execute(w, nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 	http.HandleFunc("/", handleTest)
 	log.Println("Listening on port " + listenerPort + "...")
