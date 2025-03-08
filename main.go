@@ -4,29 +4,27 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"text/template"
+
+	"kids-bank/renderer"
 )
 
 func lambdaHandler() {
 	// Example of using Go to return HTML from a Lambda function
 	// https://stackoverflow.com/questions/76430232/how-to-return-html-from-a-go-lambda-function
-	log.Println("Hello from Lambda!")
+	log.Println("Running in Lambda mode")
 }
 
 func server() {
-	log.Println("Hello from Server!")
+	log.Println("Running in server mode")
 	listenerPort := os.Getenv("KB_PORT")
 	if listenerPort == "" {
 		listenerPort = "8080"
 	}
 
 	handleTest := func(w http.ResponseWriter, r *http.Request) {
-		templ := template.Must(template.ParseFiles("index.html"))
-		err := templ.Execute(w, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		renderer.RenderIndex(w, r)
 	}
+
 	http.HandleFunc("/", handleTest)
 	log.Println("Listening on port " + listenerPort + "...")
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
