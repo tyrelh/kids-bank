@@ -8,6 +8,8 @@ import (
 )
 
 func lambdaHandler() {
+	// Example of using Go to return HTML from a Lambda function
+	// https://stackoverflow.com/questions/76430232/how-to-return-html-from-a-go-lambda-function
 	log.Println("Hello from Lambda!")
 }
 
@@ -19,7 +21,7 @@ func server() {
 	}
 
 	handleTest := func(w http.ResponseWriter, r *http.Request) {
-		templ := template.Must(template.ParseFiles("templates/index.html"))
+		templ := template.Must(template.ParseFiles("index.html"))
 		err := templ.Execute(w, nil)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -27,7 +29,7 @@ func server() {
 	}
 	http.HandleFunc("/", handleTest)
 	log.Println("Listening on port " + listenerPort + "...")
-	http.ListenAndServe(":"+listenerPort, nil)
+	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
 }
 
 func main() {
