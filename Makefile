@@ -1,2 +1,2 @@
 run:
-	KB_SERVER="yas" go run .
+	KB_SERVER="yas" go tool air
