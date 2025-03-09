@@ -5,8 +5,13 @@ import (
 	"net/http"
 	"os"
 
+	"kids-bank/database"
 	"kids-bank/renderer"
 )
+
+func init() {
+	log.SetFlags(log.Ltime | log.Lshortfile)
+}
 
 func lambdaHandler() {
 	// Example of using Go to return HTML from a Lambda function
@@ -16,6 +21,10 @@ func lambdaHandler() {
 
 func server() {
 	log.Println("Running in server mode")
+
+	db := database.Db()
+	defer db.Close()
+
 	listenerPort := os.Getenv("KB_PORT")
 	if listenerPort == "" {
 		listenerPort = "8080"
