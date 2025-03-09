@@ -30,11 +30,9 @@ func server() {
 		listenerPort = "8080"
 	}
 
-	handleTest := func(w http.ResponseWriter, r *http.Request) {
-		renderer.RenderIndex(w, r)
-	}
+	http.HandleFunc("/", renderer.RenderIndex)
+	http.HandleFunc("/transactions", renderer.RenderTransactions)
 
-	http.HandleFunc("/", handleTest)
 	log.Println("Listening on port " + listenerPort + "...")
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
 }
