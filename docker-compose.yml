@@ -1,0 +1,19 @@
+services:
+  #...
+  # Other services
+  #...
+  sqlite:
+    image: kids-bank-sqlite:latest
+    container_name: kids-bank-sqlite
+    hostname: sqlite.kb
+    ports:
+      - "8191:8191"
+    volumes:
+      - ./sqlite:/db
+    command: ["tail", "-f", "/dev/null"]  # Keeps the container running
+    healthcheck:
+      # test: ["CMD", "sqlite3", "/db/kids-bank.db", ".tables"]
+      test: ["CMD", "sqlite3", "PRAGMA schema.integrity_check"]
+      interval: 2s
+      timeout: 1s
+      retries: 10
