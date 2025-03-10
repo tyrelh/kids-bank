@@ -2,6 +2,7 @@ package renderer
 
 import (
 	"embed"
+	"fmt"
 	"kids-bank/accounting"
 	"net/http"
 	"text/template"
@@ -9,6 +10,13 @@ import (
 
 //go:embed *.html
 var templates embed.FS
+
+// Create a function map with a formatting function
+var funcMap = template.FuncMap{
+	"formatMoney": func(amount float32) string {
+		return fmt.Sprintf("%.2f", amount)
+	},
+}
 
 func RenderIndex(w http.ResponseWriter, r *http.Request) {
 	templ, err := template.ParseFS(templates, "index.html")
@@ -30,13 +38,21 @@ func RenderTransactions(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	data := struct {
-		Transactions []accounting.Transaction
-	}{
-		Transactions: transactions,
+	balance, err := accounting.GetCurrentBalanceForAccount("savings")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	templ, err := template.ParseFS(templates, "transactions.html")
+	data := struct {
+		Transactions []accounting.Transaction
+		Balance      float32
+	}{
+		Transactions: transactions,
+		Balance:      balance,
+	}
+
+	templ, err := template.New("transactions.html").Funcs(funcMap).ParseFS(templates, "transactions.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

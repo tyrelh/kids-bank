@@ -6,7 +6,7 @@
         <title>Home</title>
     </head>
     <body>
-        <h1>Transactions</h1>
+        <h1>${{formatMoney .Balance}}</h1>
         <ul>
             {{range .Transactions}}
             <li>

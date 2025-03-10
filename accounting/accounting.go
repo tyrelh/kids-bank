@@ -8,7 +8,7 @@ import (
 
 func GetAllTransactionsForAccount(account string) ([]Transaction, error) {
 	if account == "" {
-		return []Transaction{}, nil
+		return []Transaction{}, fmt.Errorf("account cannot be empty")
 	}
 	query := "SELECT * FROM account WHERE account_type = ?"
 	db := database.Db()
@@ -22,6 +22,21 @@ func GetAllTransactionsForAccount(account string) ([]Transaction, error) {
 		return []Transaction{}, fmt.Errorf("error scanning transactions for account %s: %w", account, err)
 	}
 	return transactions, nil
+}
+
+func GetCurrentBalanceForAccount(account string) (float32, error) {
+	if account == "" {
+		return 0, fmt.Errorf("account cannot be empty")
+	}
+	query := "SELECT rolling_amount_dollars FROM account WHERE account_type = ? ORDER BY id DESC LIMIT 1"
+	db := database.Db()
+	row := db.QueryRow(query, account)
+	var balance float32
+	err := row.Scan(&balance)
+	if err != nil {
+		return 0, fmt.Errorf("error querying balance for account %s: %w", account, err)
+	}
+	return balance, nil
 }
 
 func scanMultipleTransactionRows(rows *sql.Rows) ([]Transaction, error) {
