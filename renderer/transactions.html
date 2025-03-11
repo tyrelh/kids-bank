@@ -4,6 +4,11 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Home</title>
+        <script
+            src="https://unpkg.com/htmx.org@2.0.4"
+            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+            crossorigin="anonymous"
+        > </script>
     </head>
     <body>
         <h1>${{formatMoney .Balance}}</h1>
@@ -19,5 +24,10 @@
             </li>
             {{end}}
         </ul>
+        <form hx-post="/deposit">
+            <label for="deposit">Deposit:</label>
+            <input type="string" id="deposit" name="deposit" />
+            <button type="submit">Submit</button>
+        </form>
     </body>
 </html>

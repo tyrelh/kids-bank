@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"kids-bank/accounting"
 	"kids-bank/database"
 	"kids-bank/renderer"
 )
@@ -32,6 +33,7 @@ func server() {
 
 	http.HandleFunc("/", renderer.RenderIndex)
 	http.HandleFunc("/transactions", renderer.RenderTransactions)
+	http.HandleFunc("/deposit", accounting.Deposit)
 
 	log.Println("Listening on port " + listenerPort + "...")
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
