@@ -10,3 +10,12 @@ type Transaction struct {
 	TransactionType      string
 	Account              string
 }
+
+type Rate struct {
+	Id           int
+	Rate         float32
+	RateType     string
+	Frequency    int
+	PreviousRate float32
+	DateModified time.Time
+}

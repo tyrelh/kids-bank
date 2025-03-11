@@ -38,6 +38,37 @@ func GetCurrentBalanceForAccount(account string) (float32, error) {
 	return latestTransaction.RollingAmountDollars, nil
 }
 
+func ApplyInterest(w http.ResponseWriter, r *http.Request) {
+	log.Println("Applying interest to savings account")
+	rateType := "interest"
+	rate, err := getInterestRateByType(rateType)
+	if err != nil {
+		http.Error(w, "error getting interest rate: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Applying interest rate of " + fmt.Sprintf("%.2f", rate.Rate) + " to savings account")
+
+	currentBalance, err := GetCurrentBalanceForAccount("savings")
+	if err != nil {
+		http.Error(w, "error getting current balance: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	interestAmount := currentBalance * rate.Rate
+	interestAmount = roundFloatToTwoDecimalPlaces(interestAmount)
+	newBalance := currentBalance + interestAmount
+	newBalance = roundFloatToTwoDecimalPlaces(newBalance)
+
+	log.Println("Applying interest of $" + fmt.Sprintf("%.2f", interestAmount) + " to savings account")
+	err = createTransaction("savings", interestAmount, newBalance, "interest")
+	log.Println("New balance is $" + fmt.Sprintf("%.2f", newBalance))
+	if err != nil {
+		http.Error(w, "error creating transaction: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+}
+
 func Deposit(w http.ResponseWriter, r *http.Request) {
 	account := "savings"
 	amountString := r.FormValue("deposit")
@@ -47,6 +78,7 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	amountFloat := float32(amountFloat64)
+	amountFloat = roundFloatToTwoDecimalPlaces(amountFloat)
 
 	latestTransaction, err := getMostRecentTransactionForAccount(account)
 	if err != nil {
@@ -55,18 +87,28 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newBalance := latestTransaction.RollingAmountDollars + amountFloat
+	newBalance = roundFloatToTwoDecimalPlaces(newBalance)
 
 	log.Println("Creating transaction for $" + amountString + " deposit to " + account)
 
-	query := "INSERT INTO account (rolling_amount_dollars, change_amount_dollars, transaction_type, account_type) VALUES (?, ?, ?, ?)"
-	db := database.Db()
-	_, err = db.Exec(query, newBalance, amountFloat, "deposit", account)
+	err = createTransaction(account, amountFloat, newBalance, "deposit")
 	if err != nil {
-		http.Error(w, "error inserting deposit transaction: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error creating transaction: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	log.Println("Deposit successful, new balance is $" + fmt.Sprintf("%.2f", newBalance))
+}
+
+func createTransaction(account string, changeAmount float32, newBalance float32, transactionType string) error {
+
+	query := "INSERT INTO account (rolling_amount_dollars, change_amount_dollars, transaction_type, account_type) VALUES (?, ?, ?, ?)"
+	db := database.Db()
+	_, err := db.Exec(query, newBalance, changeAmount, transactionType, account)
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	return nil
 }
 
 func getMostRecentTransactionForAccount(account string) (Transaction, error) {
@@ -109,4 +151,30 @@ func scanMultipleTransactionRows(rows *sql.Rows) ([]Transaction, error) {
 		transactions = append(transactions, transaction)
 	}
 	return transactions, nil
+}
+
+func getInterestRateByType(rateType string) (Rate, error) {
+	if rateType == "" {
+		return Rate{}, fmt.Errorf("rate type cannot be empty")
+	}
+	query := "SELECT * FROM rates WHERE rate_type = ?"
+	db := database.Db()
+	row := db.QueryRow(query, rateType)
+	var rate Rate
+	err := row.Scan(
+		&rate.Id,
+		&rate.Rate,
+		&rate.RateType,
+		&rate.Frequency,
+		&rate.PreviousRate,
+		&rate.DateModified,
+	)
+	if err != nil {
+		return Rate{}, fmt.Errorf("error querying rate for type %s: %w", rateType, err)
+	}
+	return rate, nil
+}
+
+func roundFloatToTwoDecimalPlaces(input float32) float32 {
+	return float32(int(input*100)) / 100
 }

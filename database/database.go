@@ -33,11 +33,13 @@ func Db() *sql.DB {
 		defer lock.Unlock()
 		if db == nil {
 			ConnectToDb()
-		} else {
-			log.Println("Reusing db connection")
 		}
-	} else {
-		log.Println("Reusing db connection")
+		// else {
+		// 	log.Println("Reusing db connection")
+		// }
 	}
+	// else {
+	// 	log.Println("Reusing db connection")
+	// }
 	return db
 }
