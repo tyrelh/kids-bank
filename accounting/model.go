@@ -1,8 +1,10 @@
 package accounting
 
+import "time"
+
 type Transaction struct {
 	Id                   int
-	CreatedAt            string
+	CreatedAt            time.Time
 	RollingAmountDollars float32
 	ChangeAmountDollars  float32
 	TransactionType      string
