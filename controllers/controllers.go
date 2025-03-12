@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"kids-bank/accounting"
+	"log"
 	"net/http"
 	"strconv"
 	"text/template"
@@ -68,10 +69,15 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 }
 
 func ApplyInterest(w http.ResponseWriter, r *http.Request) {
-	_, err := accounting.ApplyInterest(accounting.SavingsAccount)
+	log.Println("Applying interest")
+	transaction, err := accounting.ApplyInterest(accounting.SavingsAccount)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	// return balance
+	_, err = w.Write([]byte(fmt.Sprintf("$%.2f", transaction.RollingBalanceDollars)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
