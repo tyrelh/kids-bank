@@ -31,7 +31,7 @@ func RenderIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func RenderTransactions(w http.ResponseWriter, r *http.Request) {
+func RenderAdmin(w http.ResponseWriter, r *http.Request) {
 
 	transactions, err := accounting.GetAllTransactionsForAccount("savings")
 	if err != nil {
@@ -52,7 +52,7 @@ func RenderTransactions(w http.ResponseWriter, r *http.Request) {
 		Balance:      balance,
 	}
 
-	templ, err := template.New("transactions.html").Funcs(funcMap).ParseFS(templates, "transactions.html")
+	templ, err := template.New("admin.html").Funcs(funcMap).ParseFS(templates, "admin.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

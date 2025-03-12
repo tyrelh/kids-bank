@@ -32,7 +32,7 @@ func server() {
 	}
 
 	http.HandleFunc("/", renderer.RenderIndex)
-	http.HandleFunc("/transactions", renderer.RenderTransactions)
+	http.HandleFunc("/admin", renderer.RenderAdmin)
 	http.HandleFunc("/deposit", accounting.Deposit)
 	http.HandleFunc("/apply-interest", accounting.ApplyInterest)
 
