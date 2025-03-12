@@ -21,12 +21,17 @@ var funcMap = template.FuncMap{
 }
 
 func RenderAdmin(w http.ResponseWriter, r *http.Request) {
-	transactions, err := accounting.GetAllTransactionsForAccount("savings")
+	transactions, err := accounting.GetAllTransactionsForAccount(accounting.SavingsAccount)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	balance, err := accounting.GetCurrentBalanceForAccount("savings")
+	balance, err := accounting.GetCurrentBalanceForAccount(accounting.SavingsAccount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	account, err := accounting.GetAccountByName(accounting.SavingsAccount)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -35,9 +40,11 @@ func RenderAdmin(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Transactions []accounting.Transaction
 		Balance      float32
+		Account      accounting.Account
 	}{
 		Transactions: transactions,
 		Balance:      balance,
+		Account:      account,
 	}
 
 	templ, err := template.New("admin.html").Funcs(funcMap).ParseFS(templates, "admin.html")
@@ -82,6 +89,32 @@ func ApplyInterest(w http.ResponseWriter, r *http.Request) {
 	}
 	// return balance
 	_, err = w.Write([]byte(fmt.Sprintf("$%.2f", transaction.RollingBalanceDollars)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func UpdateInterestRate(w http.ResponseWriter, r *http.Request) {
+	rateString := r.FormValue("interest-rate")
+	rateFloat64, err := strconv.ParseFloat(rateString, 32)
+	if err != nil {
+		http.Error(w, "error parsing rate: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	rateFloat := float32(rateFloat64)
+	account, err := accounting.GetAccountByName(accounting.SavingsAccount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	account.InterestRate = rateFloat
+	err = accounting.UpdateAccount(account)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// return balance
+	_, err = w.Write([]byte(fmt.Sprintf("%.2f", rateFloat)))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

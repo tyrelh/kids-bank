@@ -29,6 +29,12 @@
             <input type="string" id="deposit" name="deposit" />
             <button type="submit">Submit</button>
         </form>
-        <button hx-post="/apply-interest" hx-target="#balance">Apply Interest</button>
+        <button hx-post="/applyInterest" hx-target="#balance">Apply Interest</button>
+        <form hx-post="/updateInterestRate" hx-target="#interest-rate-current">
+            <label for="interest-rate">Interest Rate:</label>
+            <input type="string" id="interest-rate" name="interest-rate" />
+            <button type="submit">Submit</button>
+            <div id="interest-rate-current">{{.Account.InterestRate}}</div>
+        </form>
     </body>
 </html>

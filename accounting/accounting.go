@@ -78,37 +78,41 @@ func ApplyInterest(accountName string) (Transaction, error) {
 }
 
 func Deposit(amount float32, accountName string) (Transaction, error) {
-	// amountString := r.FormValue("deposit")
-	// amountFloat64, err := strconv.ParseFloat(amountString, 32)
-	// if err != nil {
-	// 	http.Error(w, "error parsing deposit amount: "+err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
-	// amountFloat := float32(amountFloat64)
-	// amountFloat = roundFloatToTwoDecimalPlaces(amountFloat)
-
 	account, err := getAccountByName(accountName)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("error getting account by name %s: %w", accountName, err)
 	}
-
 	currentBalance, err := getCurrentBalanceForAccount(account.Id)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("error getting current balance for account %s: %w", accountName, err)
 	}
-
 	newBalance := currentBalance + amount
 	newBalance = RoundFloatToTwoDecimalPlaces(newBalance)
-
 	log.Printf("Creating transaction for %f deposit to %s account", amount, accountName)
-
 	transaction, err := createTransaction(account.Id, newBalance, amount, DepositTransaction)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("error creating transaction: %w", err)
 	}
-
 	log.Printf("New balance is %f", transaction.RollingBalanceDollars)
 	return transaction, nil
+}
+
+func GetAccountByName(name string) (Account, error) {
+	account, err := getAccountByName(name)
+	if err != nil {
+		return Account{}, fmt.Errorf("error getting account by name %s: %w", name, err)
+	}
+	return account, nil
+}
+
+func UpdateAccount(account Account) error {
+	query := "UPDATE accounts SET interest_rate = ?, interest_frequency = ? WHERE id = ?"
+	db := database.Db()
+	_, err := db.Exec(query, account.InterestRate, account.InterestFrequency, account.Id)
+	if err != nil {
+		return fmt.Errorf("error updating account: %w", err)
+	}
+	return nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////

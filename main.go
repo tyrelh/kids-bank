@@ -32,7 +32,8 @@ func server() {
 
 	http.HandleFunc("/admin", controllers.RenderAdmin)
 	http.HandleFunc("/deposit", controllers.Deposit)
-	http.HandleFunc("/apply-interest", controllers.ApplyInterest)
+	http.HandleFunc("/applyInterest", controllers.ApplyInterest)
+	http.HandleFunc("/updateInterestRate", controllers.UpdateInterestRate)
 
 	log.Println("Listening on port " + listenerPort + "...")
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
