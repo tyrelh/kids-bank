@@ -61,10 +61,15 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 	}
 	amountFloat := float32(amountFloat64)
 	amountFloat = accounting.RoundFloatToTwoDecimalPlaces(amountFloat)
-	_, err = accounting.Deposit(amountFloat, accounting.SavingsAccount)
+	transaction, err := accounting.Deposit(amountFloat, accounting.SavingsAccount)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// return balance
+	_, err = w.Write([]byte(fmt.Sprintf("$%.2f", transaction.RollingBalanceDollars)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 

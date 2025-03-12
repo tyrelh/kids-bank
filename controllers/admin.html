@@ -12,7 +12,7 @@
     </head>
     <body>
         <h1 id="balance">${{formatMoney .Balance}}</h1>
-        <ul>
+        <!-- <ul>
             {{range .Transactions}}
             <li>
                 ID: {{.Id}}<br>
@@ -23,8 +23,8 @@
                 Account : {{.AccountId}}<br>
             </li>
             {{end}}
-        </ul>
-        <form hx-post="/deposit">
+        </ul> -->
+        <form hx-post="/deposit" hx-target="#balance">
             <label for="deposit">Deposit:</label>
             <input type="string" id="deposit" name="deposit" />
             <button type="submit">Submit</button>
