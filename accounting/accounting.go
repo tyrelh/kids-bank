@@ -5,19 +5,27 @@ import (
 	"fmt"
 	"kids-bank/database"
 	"log"
-	"net/http"
-	"strconv"
 )
 
-func GetAllTransactionsForAccount(account string) ([]Transaction, error) {
-	if account == "" {
+var (
+	SavingsAccount      = "savings"
+	InterestTransaction = "interest"
+	DepositTransaction  = "deposit"
+)
+
+func GetAllTransactionsForAccount(accountName string) ([]Transaction, error) {
+	if accountName == "" {
 		return []Transaction{}, fmt.Errorf("account cannot be empty")
 	}
-	query := "SELECT * FROM account WHERE account_type = ?"
-	db := database.Db()
-	rows, err := db.Query(query, account)
+	account, err := getAccountByName(accountName)
 	if err != nil {
-		return []Transaction{}, fmt.Errorf("error querying transactions for account %s: %w", account, err)
+		return []Transaction{}, fmt.Errorf("error getting account by name %s: %w", accountName, err)
+	}
+	query := "SELECT * FROM transactions WHERE account_id = ?"
+	db := database.Db()
+	rows, err := db.Query(query, account.Id)
+	if err != nil {
+		return []Transaction{}, fmt.Errorf("error querying transactions for account %s: %w", account.Name, err)
 	}
 	defer rows.Close()
 	transactions, err := scanMultipleTransactionRows(rows)
@@ -27,108 +35,128 @@ func GetAllTransactionsForAccount(account string) ([]Transaction, error) {
 	return transactions, nil
 }
 
-func GetCurrentBalanceForAccount(account string) (float32, error) {
-	if account == "" {
+func GetCurrentBalanceForAccount(accountName string) (float32, error) {
+	if accountName == "" {
 		return 0, fmt.Errorf("account cannot be empty")
 	}
-	latestTransaction, err := getMostRecentTransactionForAccount(account)
+	account, err := getAccountByName(accountName)
 	if err != nil {
-		return 0, fmt.Errorf("error getting most recent transaction for account %s: %w", account, err)
+		return 0, fmt.Errorf("error getting account by name %s: %w", accountName, err)
 	}
-	return latestTransaction.RollingAmountDollars, nil
+	balance, err := getCurrentBalanceForAccount(account.Id)
+	if err != nil {
+		return 0, fmt.Errorf("error getting most recent transaction for account %s: %w", account.Name, err)
+	}
+	return balance, nil
 }
 
-func ApplyInterest(w http.ResponseWriter, r *http.Request) {
-	log.Println("Applying interest to savings account")
-	rateType := "interest"
-	rate, err := getInterestRateByType(rateType)
+func ApplyInterest(accountName string) (Transaction, error) {
+	log.Printf("Applying interest to %s account", accountName)
+	account, err := getAccountByName(accountName)
 	if err != nil {
-		http.Error(w, "error getting interest rate: "+err.Error(), http.StatusInternalServerError)
-		return
+		return Transaction{}, fmt.Errorf("error getting account by name %s: %w", accountName, err)
 	}
+	log.Println("Applying interest rate of " + fmt.Sprintf("%.2f", account.InterestRate) + " to " + accountName + " account")
 
-	log.Println("Applying interest rate of " + fmt.Sprintf("%.2f", rate.Rate) + " to savings account")
-
-	currentBalance, err := GetCurrentBalanceForAccount("savings")
+	currentBalance, err := GetCurrentBalanceForAccount(accountName)
 	if err != nil {
-		http.Error(w, "error getting current balance: "+err.Error(), http.StatusInternalServerError)
-		return
+		return Transaction{}, fmt.Errorf("error getting current balance for account %s: %w", accountName, err)
 	}
-	interestAmount := currentBalance * rate.Rate
-	interestAmount = roundFloatToTwoDecimalPlaces(interestAmount)
+	interestAmount := currentBalance * account.InterestRate
+	interestAmount = RoundFloatToTwoDecimalPlaces(interestAmount)
 	newBalance := currentBalance + interestAmount
-	newBalance = roundFloatToTwoDecimalPlaces(newBalance)
+	newBalance = RoundFloatToTwoDecimalPlaces(newBalance)
 
-	log.Println("Applying interest of $" + fmt.Sprintf("%.2f", interestAmount) + " to savings account")
-	err = createTransaction("savings", interestAmount, newBalance, "interest")
-	log.Println("New balance is $" + fmt.Sprintf("%.2f", newBalance))
+	log.Println("Applying interest of $" + fmt.Sprintf("%.2f", interestAmount) + " to " + accountName + " account")
+	transaction, err := createTransaction(account.Id, newBalance, interestAmount, InterestTransaction)
+
 	if err != nil {
-		http.Error(w, "error creating transaction: "+err.Error(), http.StatusInternalServerError)
-		return
+		return Transaction{}, fmt.Errorf("error creating transaction: %w", err)
 	}
-
+	log.Println("New balance is $" + fmt.Sprintf("%.2f", transaction.RollingBalanceDollars))
+	return transaction, nil
 }
 
-func Deposit(w http.ResponseWriter, r *http.Request) {
-	account := "savings"
-	amountString := r.FormValue("deposit")
-	amountFloat64, err := strconv.ParseFloat(amountString, 32)
-	if err != nil {
-		http.Error(w, "error parsing deposit amount: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	amountFloat := float32(amountFloat64)
-	amountFloat = roundFloatToTwoDecimalPlaces(amountFloat)
+func Deposit(amount float32, accountName string) (Transaction, error) {
+	// amountString := r.FormValue("deposit")
+	// amountFloat64, err := strconv.ParseFloat(amountString, 32)
+	// if err != nil {
+	// 	http.Error(w, "error parsing deposit amount: "+err.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+	// amountFloat := float32(amountFloat64)
+	// amountFloat = roundFloatToTwoDecimalPlaces(amountFloat)
 
-	latestTransaction, err := getMostRecentTransactionForAccount(account)
+	account, err := getAccountByName(accountName)
 	if err != nil {
-		http.Error(w, "error getting most recent transaction: "+err.Error(), http.StatusInternalServerError)
-		return
+		return Transaction{}, fmt.Errorf("error getting account by name %s: %w", accountName, err)
 	}
 
-	newBalance := latestTransaction.RollingAmountDollars + amountFloat
-	newBalance = roundFloatToTwoDecimalPlaces(newBalance)
-
-	log.Println("Creating transaction for $" + amountString + " deposit to " + account)
-
-	err = createTransaction(account, amountFloat, newBalance, "deposit")
+	currentBalance, err := getCurrentBalanceForAccount(account.Id)
 	if err != nil {
-		http.Error(w, "error creating transaction: "+err.Error(), http.StatusInternalServerError)
-		return
+		return Transaction{}, fmt.Errorf("error getting current balance for account %s: %w", accountName, err)
 	}
 
-	log.Println("Deposit successful, new balance is $" + fmt.Sprintf("%.2f", newBalance))
+	newBalance := currentBalance + amount
+	newBalance = RoundFloatToTwoDecimalPlaces(newBalance)
+
+	log.Printf("Creating transaction for %f deposit to %s account", amount, accountName)
+
+	transaction, err := createTransaction(account.Id, newBalance, amount, DepositTransaction)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("error creating transaction: %w", err)
+	}
+
+	log.Printf("New balance is %f", transaction.RollingBalanceDollars)
+	return transaction, nil
 }
 
-func createTransaction(account string, changeAmount float32, newBalance float32, transactionType string) error {
+///////////////////////////////////////////////////////////////////////////////
+// Private functions
 
-	query := "INSERT INTO account (rolling_amount_dollars, change_amount_dollars, transaction_type, account_type) VALUES (?, ?, ?, ?)"
+func createTransaction(accountId int, newBalance float32, transactionAmount float32, transactionType string) (Transaction, error) {
+	query := "INSERT INTO transactions (account_id, rolling_balance_dollars, amount_dollars, type) VALUES (?, ?, ?, ?)"
 	db := database.Db()
-	_, err := db.Exec(query, newBalance, changeAmount, transactionType, account)
+	result, err := db.Exec(query, accountId, newBalance, transactionAmount, transactionType)
 	if err != nil {
-		return fmt.Errorf("error creating transaction: %w", err)
+		return Transaction{}, fmt.Errorf("error inserting transaction: %w", err)
 	}
-	return nil
+	transactionId, err := result.LastInsertId()
+	if err != nil {
+		return Transaction{}, fmt.Errorf("error getting last insert id: %w", err)
+	}
+	transaction, err := getTransactionById(int(transactionId))
+	if err != nil {
+		return Transaction{}, fmt.Errorf("error getting transaction by id %d: %w", transactionId, err)
+	}
+	return transaction, nil
 }
 
-func getMostRecentTransactionForAccount(account string) (Transaction, error) {
-	if account == "" {
-		return Transaction{}, fmt.Errorf("account cannot be empty")
+func getCurrentBalanceForAccount(accountId int) (float32, error) {
+	if accountId == 0 {
+		return 0, fmt.Errorf("account cannot be 0")
 	}
-	query := "SELECT * FROM account WHERE account_type = ? ORDER BY id DESC LIMIT 1"
+	query := "SELECT rolling_balance_dollars FROM transactions WHERE account_id = ? ORDER BY id DESC LIMIT 1"
 	db := database.Db()
-	row := db.QueryRow(query, account)
-	var transaction Transaction
-	err := row.Scan(
-		&transaction.Id,
-		&transaction.CreatedAt,
-		&transaction.RollingAmountDollars,
-		&transaction.ChangeAmountDollars,
-		&transaction.TransactionType,
-		&transaction.Account,
-	)
+	row := db.QueryRow(query, accountId)
+	var balance float32
+	err := row.Scan(&balance)
 	if err != nil {
-		return Transaction{}, fmt.Errorf("error querying most recent transaction for account %s: %w", account, err)
+		return 0, fmt.Errorf("error querying current balance for account %d: %w", accountId, err)
+	}
+	return balance, nil
+}
+
+func getTransactionById(transactionId int) (Transaction, error) {
+	if transactionId == 0 {
+		return Transaction{}, fmt.Errorf("transaction cannot be 0")
+	}
+	query := "SELECT * FROM transactions WHERE id = ? LIMIT 1"
+	db := database.Db()
+	row := db.QueryRow(query, transactionId)
+	transaction, err := scanSingleTransactionRow(row)
+	if err != nil {
+		return Transaction{}, fmt.Errorf("error scanning transaction by id %d: %w", transactionId, err)
 	}
 	return transaction, nil
 }
@@ -140,41 +168,55 @@ func scanMultipleTransactionRows(rows *sql.Rows) ([]Transaction, error) {
 		err := rows.Scan(
 			&transaction.Id,
 			&transaction.CreatedAt,
-			&transaction.RollingAmountDollars,
-			&transaction.ChangeAmountDollars,
-			&transaction.TransactionType,
-			&transaction.Account,
+			&transaction.AccountId,
+			&transaction.RollingBalanceDollars,
+			&transaction.AmountDollars,
+			&transaction.Type,
 		)
 		if err != nil {
-			return []Transaction{}, err
+			return []Transaction{}, fmt.Errorf("error scanning transaction row: %w", err)
 		}
 		transactions = append(transactions, transaction)
 	}
 	return transactions, nil
 }
 
-func getInterestRateByType(rateType string) (Rate, error) {
-	if rateType == "" {
-		return Rate{}, fmt.Errorf("rate type cannot be empty")
-	}
-	query := "SELECT * FROM rates WHERE rate_type = ?"
-	db := database.Db()
-	row := db.QueryRow(query, rateType)
-	var rate Rate
+func scanSingleTransactionRow(row *sql.Row) (Transaction, error) {
+	var transaction Transaction
 	err := row.Scan(
-		&rate.Id,
-		&rate.Rate,
-		&rate.RateType,
-		&rate.Frequency,
-		&rate.PreviousRate,
-		&rate.DateModified,
+		&transaction.Id,
+		&transaction.CreatedAt,
+		&transaction.AccountId,
+		&transaction.RollingBalanceDollars,
+		&transaction.AmountDollars,
+		&transaction.Type,
 	)
 	if err != nil {
-		return Rate{}, fmt.Errorf("error querying rate for type %s: %w", rateType, err)
+		return Transaction{}, err
 	}
-	return rate, nil
+	return transaction, nil
 }
 
-func roundFloatToTwoDecimalPlaces(input float32) float32 {
+func getAccountByName(name string) (Account, error) {
+	if name == "" {
+		return Account{}, fmt.Errorf("name cannot be empty")
+	}
+	query := "SELECT * FROM accounts WHERE name = ?"
+	db := database.Db()
+	row := db.QueryRow(query, name)
+	var account Account
+	err := row.Scan(
+		&account.Id,
+		&account.Name,
+		&account.InterestRate,
+		&account.InterestFrequency,
+	)
+	if err != nil {
+		return Account{}, fmt.Errorf("error querying account by name %s: %w", name, err)
+	}
+	return account, nil
+}
+
+func RoundFloatToTwoDecimalPlaces(input float32) float32 {
 	return float32(int(input*100)) / 100
 }

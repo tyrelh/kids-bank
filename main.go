@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"os"
 
-	"kids-bank/accounting"
+	"kids-bank/controllers"
 	"kids-bank/database"
-	"kids-bank/renderer"
 )
 
 func init() {
@@ -31,10 +30,9 @@ func server() {
 		listenerPort = "8080"
 	}
 
-	http.HandleFunc("/", renderer.RenderIndex)
-	http.HandleFunc("/admin", renderer.RenderAdmin)
-	http.HandleFunc("/deposit", accounting.Deposit)
-	http.HandleFunc("/apply-interest", accounting.ApplyInterest)
+	http.HandleFunc("/admin", controllers.RenderAdmin)
+	http.HandleFunc("/deposit", controllers.Deposit)
+	http.HandleFunc("/apply-interest", controllers.ApplyInterest)
 
 	log.Println("Listening on port " + listenerPort + "...")
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))

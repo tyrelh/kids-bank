@@ -16,11 +16,11 @@
             {{range .Transactions}}
             <li>
                 ID: {{.Id}}<br>
-                Balance: {{.RollingAmountDollars}}<br>
-                Change: {{.ChangeAmountDollars}}<br>
-                Transaction Type: {{.TransactionType}}<br>
+                Balance: {{.RollingBalanceDollars}}<br>
+                Change: {{.AmountDollars}}<br>
+                Transaction Type: {{.Type}}<br>
                 Created At: {{.CreatedAt}}<br>
-                Account : {{.Account}}<br>
+                Account : {{.AccountId}}<br>
             </li>
             {{end}}
         </ul>
