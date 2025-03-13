@@ -27,14 +27,19 @@
         <form hx-post="/deposit" hx-target="#balance">
             <label for="deposit">Deposit:</label>
             <input type="string" id="deposit" name="deposit" />
+            <br/>
             <button type="submit">Submit</button>
         </form>
         <button hx-post="/applyInterest" hx-target="#balance">Apply Interest</button>
         <form hx-post="/updateInterestRate" hx-target="#interest-rate-current">
-            <label for="interest-rate">Interest Rate:</label>
+            <label for="interest-rate">Interest Rate <span id="interest-rate-current">{{.Account.InterestRate}}</span>%:</label>
             <input type="string" id="interest-rate" name="interest-rate" />
+            <br/>
+            <label for="interest-frequency">Interest Frequency <span id="interest-frequency-current">{{.Account.InterestFrequency}}</span>:</label>
+            <input type="string" id="interest-frequency" name="interest-frequency" />
+            <br/>
             <button type="submit">Submit</button>
-            <div id="interest-rate-current">{{.Account.InterestRate}}</div>
+            {{.InterestApplied}}
         </form>
     </body>
 </html>

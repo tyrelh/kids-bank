@@ -21,30 +21,38 @@ var funcMap = template.FuncMap{
 }
 
 func RenderAdmin(w http.ResponseWriter, r *http.Request) {
-	transactions, err := accounting.GetAllTransactionsForAccount(accounting.SavingsAccount)
+	transactions, err := accounting.GetAllTransactionsForAccount(accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	balance, err := accounting.GetCurrentBalanceForAccount(accounting.SavingsAccount)
+	balance, err := accounting.GetCurrentBalanceForAccount(accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	account, err := accounting.GetAccountByName(accounting.SavingsAccount)
+	account, err := accounting.GetAccountByName(accounting.SAVINGS_ACCOUNT)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	interestAlreadyApplied, err := accounting.HasInterestBeenAppliedInPeriod(accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	data := struct {
-		Transactions []accounting.Transaction
-		Balance      float32
-		Account      accounting.Account
+		Transactions    []accounting.Transaction
+		Balance         float32
+		Account         accounting.Account
+		InterestApplied bool
 	}{
-		Transactions: transactions,
-		Balance:      balance,
-		Account:      account,
+		Transactions:    transactions,
+		Balance:         balance,
+		Account:         account,
+		InterestApplied: interestAlreadyApplied,
 	}
 
 	templ, err := template.New("admin.html").Funcs(funcMap).ParseFS(templates, "admin.html")
@@ -68,7 +76,7 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 	}
 	amountFloat := float32(amountFloat64)
 	amountFloat = accounting.RoundFloatToTwoDecimalPlaces(amountFloat)
-	transaction, err := accounting.Deposit(amountFloat, accounting.SavingsAccount)
+	transaction, err := accounting.Deposit(amountFloat, accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,7 +90,7 @@ func Deposit(w http.ResponseWriter, r *http.Request) {
 
 func ApplyInterest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Applying interest")
-	transaction, err := accounting.ApplyInterest(accounting.SavingsAccount)
+	transaction, err := accounting.ApplyInterest(accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -102,7 +110,7 @@ func UpdateInterestRate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rateFloat := float32(rateFloat64)
-	account, err := accounting.GetAccountByName(accounting.SavingsAccount)
+	account, err := accounting.GetAccountByName(accounting.SAVINGS_ACCOUNT)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

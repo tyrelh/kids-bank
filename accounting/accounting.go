@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"kids-bank/database"
 	"log"
+	"time"
 )
 
 var (
-	SavingsAccount      = "savings"
-	InterestTransaction = "interest"
-	DepositTransaction  = "deposit"
+	SAVINGS_ACCOUNT        = "savings"
+	INTEREST_TRANSACTION   = "interest"
+	DEPOSIT_TRANSACTION    = "deposit"
+	WITHDRAWAL_TRANSACTION = "withdrawal"
 )
 
 func GetAllTransactionsForAccount(accountName string) ([]Transaction, error) {
@@ -68,7 +70,7 @@ func ApplyInterest(accountName string) (Transaction, error) {
 	newBalance = RoundFloatToTwoDecimalPlaces(newBalance)
 
 	log.Println("Applying interest of $" + fmt.Sprintf("%.2f", interestAmount) + " to " + accountName + " account")
-	transaction, err := createTransaction(account.Id, newBalance, interestAmount, InterestTransaction)
+	transaction, err := createTransaction(account.Id, newBalance, interestAmount, INTEREST_TRANSACTION)
 
 	if err != nil {
 		return Transaction{}, fmt.Errorf("error creating transaction: %w", err)
@@ -89,7 +91,7 @@ func Deposit(amount float32, accountName string) (Transaction, error) {
 	newBalance := currentBalance + amount
 	newBalance = RoundFloatToTwoDecimalPlaces(newBalance)
 	log.Printf("Creating transaction for %f deposit to %s account", amount, accountName)
-	transaction, err := createTransaction(account.Id, newBalance, amount, DepositTransaction)
+	transaction, err := createTransaction(account.Id, newBalance, amount, DEPOSIT_TRANSACTION)
 	if err != nil {
 		return Transaction{}, fmt.Errorf("error creating transaction: %w", err)
 	}
@@ -113,6 +115,25 @@ func UpdateAccount(account Account) error {
 		return fmt.Errorf("error updating account: %w", err)
 	}
 	return nil
+}
+
+func HasInterestBeenAppliedInPeriod(accountName string) (bool, error) {
+	account, err := getAccountByName(accountName)
+	if err != nil {
+		return false, fmt.Errorf("error getting account by name %s: %w", accountName, err)
+	}
+	query := "SELECT * FROM transactions WHERE account_id = ? AND type = ? ORDER BY created_at DESC LIMIT 1"
+	db := database.Db()
+	row := db.QueryRow(query, account.Id, INTEREST_TRANSACTION)
+	transactions, err := scanSingleTransactionRow(row)
+	if err != nil {
+		return false, fmt.Errorf("error scanning transactions for account %s: %w", accountName, err)
+	}
+
+	if transactions.LocalCreatedAt().AddDate(0, 0, account.InterestFrequency).After(time.Now()) {
+		return true, nil
+	}
+	return false, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////
