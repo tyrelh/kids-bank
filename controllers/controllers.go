@@ -127,3 +127,28 @@ func UpdateInterestRate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
+
+func UpdateInterestFrequency(w http.ResponseWriter, r *http.Request) {
+	frequencyString := r.FormValue("interest-frequency")
+	frequencyInt, err := strconv.Atoi(frequencyString)
+	if err != nil {
+		http.Error(w, "error parsing frequency: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	account, err := accounting.GetAccountByName(accounting.SAVINGS_ACCOUNT)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	account.InterestFrequency = frequencyInt
+	err = accounting.UpdateAccount(account)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// return balance
+	_, err = w.Write([]byte(fmt.Sprintf("%d", frequencyInt)))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}

@@ -34,8 +34,9 @@ func server() {
 	http.HandleFunc("/deposit", controllers.Deposit)
 	http.HandleFunc("/applyInterest", controllers.ApplyInterest)
 	http.HandleFunc("/updateInterestRate", controllers.UpdateInterestRate)
+	http.HandleFunc("/updateInterestFrequency", controllers.UpdateInterestFrequency)
 
-	log.Println("Listening on port " + listenerPort + "...")
+	log.Printf("Listening on http://localhost:%s\n", listenerPort)
 	log.Fatal(http.ListenAndServe(":"+listenerPort, nil))
 }
 

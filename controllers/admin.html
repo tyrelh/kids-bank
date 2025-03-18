@@ -9,37 +9,71 @@
             integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
             crossorigin="anonymous"
         > </script>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+        >
+        <style>
+            .container {
+                width: 500px ;
+            }
+        </style>
     </head>
     <body>
-        <h1 id="balance">${{formatMoney .Balance}}</h1>
-        <!-- <ul>
-            {{range .Transactions}}
-            <li>
-                ID: {{.Id}}<br>
-                Balance: {{.RollingBalanceDollars}}<br>
-                Change: {{.AmountDollars}}<br>
-                Transaction Type: {{.Type}}<br>
-                Created At: {{.CreatedAt}}<br>
-                Account : {{.AccountId}}<br>
-            </li>
-            {{end}}
-        </ul> -->
-        <form hx-post="/deposit" hx-target="#balance">
+        <div class="container">
+            <h1 id="balance">${{formatMoney .Balance}}</h1>
+            <!-- <ul>
+                {{range .Transactions}}
+                <li>
+                    ID: {{.Id}}<br>
+                    Balance: {{.RollingBalanceDollars}}<br>
+                    Change: {{.AmountDollars}}<br>
+                    Transaction Type: {{.Type}}<br>
+                    Created At: {{.CreatedAt}}<br>
+                    Account : {{.AccountId}}<br>
+                </li>
+                {{end}}
+            </ul> -->
             <label for="deposit">Deposit:</label>
-            <input type="string" id="deposit" name="deposit" />
+            <input
+                type="string"
+                id="deposit"
+                name="deposit"
+                hx-post="/deposit"
+                hx-target="#balance"
+                hx-trigger="keyup[key=='Enter']"
+            />
             <br/>
-            <button type="submit">Submit</button>
-        </form>
-        <button hx-post="/applyInterest" hx-target="#balance">Apply Interest</button>
-        <form hx-post="/updateInterestRate" hx-target="#interest-rate-current">
-            <label for="interest-rate">Interest Rate <span id="interest-rate-current">{{.Account.InterestRate}}</span>%:</label>
-            <input type="string" id="interest-rate" name="interest-rate" />
+            <button hx-post="/applyInterest" hx-target="#balance">Apply Interest</button>
+            <label for="interest-rate">
+                Interest Rate <span id="interest-rate-current">{{.Account.InterestRate}}</span>%:
+            </label>
+            <input
+                type="string"
+                id="interest-rate"
+                name="interest-rate"
+                hx-post="/updateInterestRate"
+                hx-target="#interest-rate-current"
+                hx-trigger="blur, keyup[key=='Enter']"
+            />
             <br/>
-            <label for="interest-frequency">Interest Frequency <span id="interest-frequency-current">{{.Account.InterestFrequency}}</span>:</label>
-            <input type="string" id="interest-frequency" name="interest-frequency" />
+            <label for="interest-frequency">
+                Interest Frequency <span id="interest-frequency-current">{{.Account.InterestFrequency}}</span>:
+            </label>
+            <input
+                type="string"
+                id="interest-frequency"
+                name="interest-frequency"
+                hx-post="/updateInterestFrequency"
+                hx-target="#interest-frequency-current"
+                hx-trigger="blur, keyup[key=='Enter']"
+            />
             <br/>
-            <button type="submit">Submit</button>
-            {{.InterestApplied}}
-        </form>
+            {{if .InterestApplied}}
+            <p>
+                Interest already applied in the period.
+            </p>
+            {{end}}
+        </div>
     </body>
 </html>

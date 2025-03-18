@@ -6,3 +6,8 @@ This project is a simple savings account app that lets you do deposits and withd
 ```bash
 make run
 ```
+
+## Notes
+### Charting libraries
+ChartCSS uses only CSS and HTML tables
+https://chartscss.org/docs/installation/

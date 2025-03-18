@@ -3,3 +3,6 @@ tmp
 
 # Sqlite
 local.db
+
+# MacOS
+.DS_Store
